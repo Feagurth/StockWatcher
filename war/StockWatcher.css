@@ -1,0 +1,55 @@
+body {
+	padding: 10vmax;
+}
+
+.watchListHeader {
+	background-color: #2062B8;
+	color: white;
+	font-style: italic;
+}
+
+.watchList {
+	border: 0.2vmax solid silver;
+	padding: 0.2vmax;
+	margin-bottom: 0.6vmax;
+}
+
+.watchListNumericColumn {
+	text-align: right;
+	width: 8vmax;
+}
+
+.watchListNumericColumnHeader {
+	text-align: center;
+	width: 8vmax;
+}
+
+.watchListNonNumericColumnHeader {
+	text-align: center;
+	width: 6vmax;
+}
+
+.watchListRemoveColumn {
+	text-align: center;
+	width: 4vmax;
+}
+
+.addPanel {
+	margin: 0.10vmax 0vmax 0.15vmax 0vmax;
+}
+
+.gwt-Button-remove {
+	width: 3vmax;
+}
+
+.noChange {
+	color: black;
+}
+
+.positiveChange {
+	color: green;
+}
+
+.negativeChange {
+	color: red;
+}

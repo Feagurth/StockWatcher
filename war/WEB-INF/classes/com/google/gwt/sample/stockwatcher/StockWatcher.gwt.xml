@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.6.1//EN"
+  "file:///C:/gwt-2.6.1/gwt-module.dtd">
+<module rename-to='stockwatcher'>
+	<!-- Hereda las cosas necesarias del núcleo de GWT -->
+	<inherits name='com.google.gwt.user.User' />
+
+	<!-- Hereda la hoja de estilo por defecto de la aplicación -->
+	<inherits name='com.google.gwt.user.theme.clean.Clean' />
+
+	<!-- Especifica la clase de entrada de la aplicación -->
+	<entry-point class='com.google.gwt.sample.stockwatcher.client.StockWatcher' />
+
+	<!-- Define los lenguajes soportados por la aplicación y para los cuales 
+		se ha creado el sistema de internacionalización -->
+	<extend-property name="locale" values="de" />
+	<extend-property name="locale" values="es" />
+	<extend-property name="locale" values="it" />
+
+	<!-- Especifica las rutas del codigo traducible -->
+	<source path='client' />
+	<source path='shared' />
+
+	<!-- Permite la ejecución del modo Super Dev -->
+	<add-linker name="xsiframe" />
+	/> -->
+</module>
