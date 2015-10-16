@@ -1,10 +1,17 @@
 package com.google.gwt.sample.stockwatcher.client;
 
+import java.io.Serializable;
+
 /**
  * Clase para almacenar la información de el precio de las acciones
  * 
  */
-public class StockPrice {
+public class StockPrice implements Serializable {
+
+	/**
+	 * Id generado aleatoriamente
+	 */
+	private static final long serialVersionUID = 6920472853042767550L;
 
 	/**
 	 * Variable para almacenar el nombre de la acción
@@ -21,6 +28,14 @@ public class StockPrice {
 	 * anterior al actual
 	 */
 	private double change;
+
+	/**
+	 * Constructor de la clase sin parámetros para permitir la serialización de
+	 * la misma
+	 */
+	public StockPrice() {
+		super();
+	}
 
 	/**
 	 * Constructor de la clase

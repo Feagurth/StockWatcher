@@ -11,9 +11,9 @@ import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.i18n.client.NumberFormat;
-import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -39,9 +39,14 @@ public class StockWatcher implements EntryPoint {
 	private TextBox newSymbolTextBox = new TextBox();
 	private Button addStockButton = new Button("Add");
 	private Label lastUpdatedLabel = new Label();
+	private Label errorMsgLabel = new Label();
 
 	// ArrayList que contiene las acciones que el usuario ha introducido
 	private ArrayList<String> stocks = new ArrayList<String>();
+
+	// Creamos una instancia del servicio de datos
+	private StockPriceServiceAsync stockPriceSvc = GWT
+			.create(StockPriceService.class);
 
 	// Creamos una instancia de la interfaz de constantes internacionalizadas
 	private StockWatcherConstants constants = GWT
@@ -70,7 +75,7 @@ public class StockWatcher implements EntryPoint {
 		// Creamos el botón de añadir acciones, pasándole como texto la cadena
 		// sacada de la interfaz de constantes internacionalizadas
 		addStockButton = new Button(constants.add());
-		
+
 		// Definimos los valores de los encabezados de las columnas, recuperando
 		// el texto de las mismas de la interfaz de internacionalización
 		stocksFlexTable.setText(0, 0, constants.symbol());
@@ -97,6 +102,13 @@ public class StockWatcher implements EntryPoint {
 		addPanel.add(newSymbolTextBox);
 		addPanel.add(addStockButton);
 		addPanel.addStyleName("addPanel");
+
+		// Definimos una etiqueta para mostrar los mensajes de error y le
+		// asignamos el estilo que hemos definido para ella
+		errorMsgLabel.setStyleName("errorMessage");
+
+		// Hacemos la etiqueta invisible hasta que tengamos un error que mostrar
+		errorMsgLabel.setVisible(false);
 
 		// Definimos un evento para la pulsación del botón en el cuadro de texto
 		newSymbolTextBox.addKeyDownHandler(new KeyDownHandler() {
@@ -128,6 +140,7 @@ public class StockWatcher implements EntryPoint {
 		addPanel.add(addStockButton);
 
 		// Añadimos al panel principal el resto de controles
+		mainPanel.add(errorMsgLabel);
 		mainPanel.add(stocksFlexTable);
 		mainPanel.add(addPanel);
 		mainPanel.add(lastUpdatedLabel);
@@ -253,41 +266,65 @@ public class StockWatcher implements EntryPoint {
 	 */
 	private void refreshWatchList() {
 
-		/**
-		 * Constante para definir el precio máximo que tomará una acción
-		 */
-		final double MAX_PRICE = 100.0;
-
-		/**
-		 * Constante para definir el cambio de precio máximo que va a sufrir una
-		 * acción
-		 */
-		final double MAX_PRICE_CHANGE = 0.02;
-
-		// Creamos un array de objetos StockPrice del mismo tamaño que la lista
-		// de acciones para almacenar los valores de estas
-		StockPrice[] prices = new StockPrice[stocks.size()];
-
-		// Iteramos por todos los valores contenido en el ArrayList de acciones
-		for (int i = 0; i < stocks.size(); i++) {
-
-			// Generamos el precio de la acción multiplicando el precio máximo
-			// por un número decimal aleatorio entre 0 y 1
-			double price = Random.nextDouble() * MAX_PRICE;
-
-			// Generamos el cambio de valor multiplicando el precio por el
-			// cambio de precio máximo multiplicado por un valor aleatorio entre
-			// -1 y +1
-			double change = price * MAX_PRICE_CHANGE
-					* (Random.nextDouble() * 2.0 - 1.0);
-
-			// Añadimos el nuevo objeto StockPrice al array de precios de las
-			// acciones
-			prices[i] = new StockPrice(stocks.get(i), price, change);
+		// Inicializamos el servicio Proxy
+		if (stockPriceSvc == null) {
+			stockPriceSvc = GWT.create(StockPriceService.class);
 		}
 
-		// Actualizamos la tabla con los precios de las acciones
-		updateTable(prices);
+		// Configuramos el objeto de retrollamada encargado de recibir la
+		// respuesta del servidor
+		AsyncCallback<StockPrice[]> callback = new AsyncCallback<StockPrice[]>() {
+			/**
+			 * Función que se ejecutará cuando se produzca un error en la
+			 * petición remota
+			 */
+			public void onFailure(Throwable caught) {
+
+				// Recuperamos el mensaje de error de la excepción y lo
+				// almacenamos en una variable
+				String details = caught.getMessage();
+
+				// Comprobamos si el excepción generada es una instancia de la
+				// excepción que hemos creado nosotros
+				if (caught instanceof DelistedException) {
+
+					// Si es así, recuperamos el símbolo de la acción que ha
+					// generado la excepción y creamos un mensaje para mostrar
+					// al usuario haciendo uso del sistema de
+					// internacionalización
+					details = messages
+							.companyError(((DelistedException) caught)
+									.getSymbol());
+				}
+
+				// Asignamos una cadena de texto con el mensaje de error a la
+				// etiqueta correspondiente haciendo uso de la
+				// internacionalización
+				errorMsgLabel.setText(constants.error() + ": " + details);
+
+				// Hacemos la etiqueta visible
+				errorMsgLabel.setVisible(true);
+			}
+
+			/**
+			 * Función que se ejecutará cuando se produzca un exito en la
+			 * petición remota
+			 * 
+			 * @param result
+			 *            StockPrice[] Array objetos StockPrice que contiene los
+			 *            valores de precios de las acciones
+			 */
+			public void onSuccess(StockPrice[] result) {
+				// Actualizamos la tabla con los resultados obtenidos del
+				// servidor
+				updateTable(result);
+			}
+		};
+
+		// Llamamos al servicio de precios pasándole como parámetros el array de
+		// símbolos y el objeto de retrollamada que será el encargado de tratar
+		// con los resultados obtenidos por el servidor
+		stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
 
 	}
 
@@ -313,6 +350,11 @@ public class StockWatcher implements EntryPoint {
 			// del sistema, recuperando el mensaje de la interfaz de
 			// internacionalización correspondiente
 			lastUpdatedLabel.setText(messages.lastUpdate(new Date()));
+
+			// Ocultamos cualquier mensaje de error que se haya producido
+			// anteriormente
+			errorMsgLabel.setVisible(false);
+
 		}
 
 	}
