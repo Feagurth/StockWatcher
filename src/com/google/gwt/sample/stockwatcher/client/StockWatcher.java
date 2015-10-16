@@ -2,18 +2,26 @@ package com.google.gwt.sample.stockwatcher.client;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.JsArray;
+import com.google.gwt.core.client.JsonUtils;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
+import com.google.gwt.http.client.Request;
+import com.google.gwt.http.client.RequestBuilder;
+import com.google.gwt.http.client.RequestCallback;
+import com.google.gwt.http.client.RequestException;
+import com.google.gwt.http.client.Response;
+import com.google.gwt.http.client.URL;
 import com.google.gwt.i18n.client.NumberFormat;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -32,6 +40,12 @@ public class StockWatcher implements EntryPoint {
 	 */
 	private static final int REFRESH_INTERVAL = 5000;
 
+	/**
+	 * Constante para definir la url necesaria para realizar peticiones JSON
+	 */
+	private static final String JSON_URL = GWT.getModuleBaseURL()
+			+ "stockPrices?q=";
+
 	// Objetos usados para la interfaz gráfica
 	private VerticalPanel mainPanel = new VerticalPanel();
 	private FlexTable stocksFlexTable = new FlexTable();
@@ -44,9 +58,8 @@ public class StockWatcher implements EntryPoint {
 	// ArrayList que contiene las acciones que el usuario ha introducido
 	private ArrayList<String> stocks = new ArrayList<String>();
 
-	// Creamos una instancia del servicio de datos
-	private StockPriceServiceAsync stockPriceSvc = GWT
-			.create(StockPriceService.class);
+	// Creamos una instancia del servicio de datos private
+	StockPriceServiceAsync stockPriceSvc = GWT.create(StockPriceService.class);
 
 	// Creamos una instancia de la interfaz de constantes internacionalizadas
 	private StockWatcherConstants constants = GWT
@@ -266,65 +279,148 @@ public class StockWatcher implements EntryPoint {
 	 */
 	private void refreshWatchList() {
 
-		// Inicializamos el servicio Proxy
-		if (stockPriceSvc == null) {
-			stockPriceSvc = GWT.create(StockPriceService.class);
+		// Comprobamos si tenemos algún valor en el array de acciones
+		if (stocks.size() == 0) {
+			// Si no hay ninguno, salimos de la función
+			return;
 		}
 
-		// Configuramos el objeto de retrollamada encargado de recibir la
-		// respuesta del servidor
-		AsyncCallback<StockPrice[]> callback = new AsyncCallback<StockPrice[]>() {
-			/**
-			 * Función que se ejecutará cuando se produzca un error en la
-			 * petición remota
-			 */
-			public void onFailure(Throwable caught) {
+		// Recuperamos la url de las peticiones JSON y la asociamos a una
+		// variable
+		String url = JSON_URL;
 
-				// Recuperamos el mensaje de error de la excepción y lo
-				// almacenamos en una variable
-				String details = caught.getMessage();
+		// Transformamos el arraylist en un iterador
+		Iterator<String> iter = stocks.iterator();
 
-				// Comprobamos si el excepción generada es una instancia de la
-				// excepción que hemos creado nosotros
-				if (caught instanceof DelistedException) {
+		// Iteramos por todos los elementos
+		while (iter.hasNext()) {
 
-					// Si es así, recuperamos el símbolo de la acción que ha
-					// generado la excepción y creamos un mensaje para mostrar
-					// al usuario haciendo uso del sistema de
-					// internacionalización
-					details = messages
-							.companyError(((DelistedException) caught)
-									.getSymbol());
+			// Añadimos a la url el código de la acción
+			url += iter.next();
+
+			// Comprobamos si hay mas registros tras el actual
+			if (iter.hasNext()) {
+				// Si es así, concatenamos a la url un signo +
+				url += "+";
+			}
+		}
+
+		// Transformamos la cadena de texto en una url y la almacenamos
+		url = URL.encode(url);
+
+		// Creamos un constructor de peticiones que realizará una petición tipo
+		// GET a la url especificada para realizar consultas JSON
+		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+
+		try {
+
+			// A partir del constructor creamos una petición sobre la cual
+			// asignaremos eventos para cuando se produzca un error o una
+			// respuesta exitosa
+			Request request = builder.sendRequest(null, new RequestCallback() {
+				/**
+				 * Función que se ejecutará cuando en la petición de datos se
+				 * produzca un error
+				 */
+				public void onError(Request request, Throwable exception) {
+					// Llamamos a la función diseñada para mostrar errores
+					// pasándole una cadena con el mensaje que queremos mostrar
+					// usando el sistema de internacionalización
+					displayError(messages.retrieveJSONError(""));
 				}
 
-				// Asignamos una cadena de texto con el mensaje de error a la
-				// etiqueta correspondiente haciendo uso de la
-				// internacionalización
-				errorMsgLabel.setText(constants.error() + ": " + details);
+				/**
+				 * Función que se ejecutará cuando la petición de datos sea
+				 * exitosa
+				 */
+				public void onResponseReceived(Request request,
+						Response response) {
 
-				// Hacemos la etiqueta visible
-				errorMsgLabel.setVisible(true);
-			}
+					// Comprobamos que el código de respuesta enviado por el
+					// servidor sea 200, o lo que es lo mismo que la petición ha
+					// sido completada exitosamente
+					if (200 == response.getStatusCode()) {
 
-			/**
-			 * Función que se ejecutará cuando se produzca un exito en la
-			 * petición remota
-			 * 
-			 * @param result
-			 *            StockPrice[] Array objetos StockPrice que contiene los
-			 *            valores de precios de las acciones
-			 */
-			public void onSuccess(StockPrice[] result) {
-				// Actualizamos la tabla con los resultados obtenidos del
-				// servidor
-				updateTable(result);
-			}
-		};
+						// Llamamos a la función updateTable pasando como
+						// parámetros un JsArray de objetos StockData que
+						// conseguiremos tras usar JsonUtils para convertir la
+						// respuesta en modo de texto de servidor en el JsArray
+						// de objetos StockData que pide la función como
+						// parámetros
+						updateTable(JsonUtils
+								.<JsArray<StockData>> safeEval(response
+										.getText()));
+					} else {
+						// Si el código de respuesta no es 200, mostramos un
+						// mensaje de error formado por una cadena que
+						// recuperamos del sistema de internacionalización
+						// concatenado con el texto de respuesta del servidor
+						displayError(messages.retrieveJSONError("("
+								+ response.getStatusText() + ")"));
+					}
+				}
+			});
+		} catch (RequestException e) {
+			// Si se produce una excepción, mostramos así mismo un mensaje de
+			// error
+			displayError(messages.retrieveJSONError(""));
+		}
 
-		// Llamamos al servicio de precios pasándole como parámetros el array de
-		// símbolos y el objeto de retrollamada que será el encargado de tratar
-		// con los resultados obtenidos por el servidor
-		stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
+		/*
+		 * 
+		 * Código para hacer peticiones de refresco de datos usando RPC
+		 * 
+		 * Comentado para poder implementar la recuperación de información en
+		 * formato JSON
+		 * 
+		 * // Inicializamos el servicio Proxy if (stockPriceSvc == null) {
+		 * stockPriceSvc = GWT.create(StockPriceService.class); }
+		 * 
+		 * // Configuramos el objeto de retrollamada encargado de recibir la //
+		 * respuesta del servidor AsyncCallback<StockPrice[]> callback = new
+		 * AsyncCallback<StockPrice[]>() {
+		 *//**
+		 * Función que se ejecutará cuando se produzca un error en la
+		 * petición remota
+		 */
+		/*
+		 * public void onFailure(Throwable caught) {
+		 * 
+		 * // Recuperamos el mensaje de error de la excepción y lo //
+		 * almacenamos en una variable String details = caught.getMessage();
+		 * 
+		 * // Comprobamos si el excepción generada es una instancia de la //
+		 * excepción que hemos creado nosotros if (caught instanceof
+		 * DelistedException) {
+		 * 
+		 * // Si es así, recuperamos el símbolo de la acción que ha // generado
+		 * la excepción y creamos un mensaje para mostrar // al usuario haciendo
+		 * uso del sistema de // internacionalización details = messages
+		 * .companyError(((DelistedException) caught) .getSymbol()); }
+		 * 
+		 * // Asignamos una cadena de texto con el mensaje de error a la //
+		 * etiqueta correspondiente haciendo uso de la // internacionalización
+		 * errorMsgLabel.setText(constants.error() + ": " + details);
+		 * 
+		 * // Hacemos la etiqueta visible errorMsgLabel.setVisible(true); }
+		 *//**
+		 * Función que se ejecutará cuando se produzca un exito en la
+		 * petición remota
+		 * 
+		 * @param result
+		 *            StockPrice[] Array objetos StockPrice que contiene los
+		 *            valores de precios de las acciones
+		 */
+		/*
+		 * public void onSuccess(StockPrice[] result) { // Actualizamos la tabla
+		 * con los resultados obtenidos del // servidor updateTable(result); }
+		 * };
+		 * 
+		 * // Llamamos al servicio de precios pasándole como parámetros el array
+		 * de // símbolos y el objeto de retrollamada que será el encargado de
+		 * tratar // con los resultados obtenidos por el servidor
+		 * stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
+		 */
 
 	}
 
@@ -356,7 +452,35 @@ public class StockWatcher implements EntryPoint {
 			errorMsgLabel.setVisible(false);
 
 		}
+	}
 
+	/**
+	 * Función que nos permite actualizar los valores de la tabla de acciones
+	 * 
+	 * @param prices
+	 *            Array de objetos StockData
+	 */
+	private void updateTable(JsArray<StockData> prices) {
+		// Comprobamos si tenemos precios con los que trabajar en el array
+		if (prices.length() > 0) {
+
+			// Iteramos por el array de valores de las acciones
+			for (int i = 0; i < prices.length(); i++) {
+
+				// Actualizamos en la tabla el precio introducido
+				updateTable(prices.get(i));
+			}
+
+			// Actualizamos el valor de la etiqueta con la fecha y hora actual
+			// del sistema, recuperando el mensaje de la interfaz de
+			// internacionalización correspondiente
+			lastUpdatedLabel.setText(messages.lastUpdate(new Date()));
+
+			// Ocultamos cualquier mensaje de error que se haya producido
+			// anteriormente
+			errorMsgLabel.setVisible(false);
+
+		}
 	}
 
 	/**
@@ -426,6 +550,89 @@ public class StockWatcher implements EntryPoint {
 		// Cambiamos el estilo de la etiqueta con el estilo que hemos obtenido
 		changeWidget.setStyleName(changeStyleName);
 
+	}
+
+	/**
+	 * Actualiza una sola linea de la tabla de acciones
+	 * 
+	 * @param price
+	 *            Información de los valores de la acción
+	 */
+	private void updateTable(StockData price) {
+
+		// Verificamos que la acción aún forma parte de los valores introducidos
+		// en la tabla
+		if (!stocks.contains(price.getSymbol())) {
+			// Si no es así ,salimos de la función
+			return;
+		}
+
+		// Almacenamos la posición en la tabla de la acción que hemos
+		// introducido, cuya posición será la posición en el ArrayList de
+		// acciones +1
+		int row = stocks.indexOf(price.getSymbol()) + 1;
+
+		// Format the data in the Price and Change fields.
+		String priceText = NumberFormat.getFormat("#,##0.00").format(
+				price.getPrice());
+
+		// Definimos un formato específico para mostrar los valores de la acción
+		NumberFormat changeFormat = NumberFormat
+				.getFormat("+#,##0.00;-#,##0.00");
+
+		// Usamos el formato creado para tratar el cambio de precio de la acción
+		// almacenando el resultado en una variable
+		String changeText = changeFormat.format(price.getChange());
+
+		// Usamos el formato creado para tratar el cambio de precio en
+		// percentiles y lo almacenamos en una variable
+		String changePercentText = changeFormat
+				.format(price.getChangePercent());
+
+		// Modificamos los valores de la fila de la tabla con los nuevos valores
+		stocksFlexTable.setText(row, 1, priceText);
+
+		// Recuperamos el objeto Label que hay en la celda correspondiente a la
+		// columna 2
+		Label changeWidget = (Label) stocksFlexTable.getWidget(row, 2);
+
+		// Cambiamos el valor del texto de la etiqueta por el nuevo valor
+		changeWidget.setText(changeText + " (" + changePercentText + "%)");
+
+		// Definimos una variable con el nombre de un estilo si no hay cambios
+		String changeStyleName = "noChange";
+
+		// Comprobamos si el cambio de precio en percentiles es menor de -0.1
+		if (price.getChangePercent() < -0.1f) {
+			// Si es así cambiamos el valor de la variable por el nombre del
+			// estilo para cambios negativos
+			changeStyleName = "negativeChange";
+		}
+		// Si el cambio de precio en percentiles no es menor de -0.1,
+		// comprobamos si es mayor de 0.1
+		else if (price.getChangePercent() > 0.1f) {
+			// Si es así cambiamos el valor de la variable por el nombre del
+			// estilo para cambios positivos
+			changeStyleName = "positiveChange";
+		}
+
+		// Cambiamos el estilo de la etiqueta con el estilo que hemos obtenido
+		changeWidget.setStyleName(changeStyleName);
+
+	}
+
+	/**
+	 * Función para mostrar mensajes de error
+	 * 
+	 * @param error
+	 *            String Cadena que contiene el error
+	 */
+	private void displayError(String error) {
+		// Asignamos el mensaje de error a la etiqueta correspondientes
+		errorMsgLabel.setText(constants.error() + ": " + error);
+
+		// La hacemos visible
+		errorMsgLabel.setVisible(true);
 	}
 
 }

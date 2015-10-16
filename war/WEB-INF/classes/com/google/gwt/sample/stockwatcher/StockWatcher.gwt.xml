@@ -8,6 +8,9 @@
 	<!-- Hereda la hoja de estilo por defecto de la aplicación -->
 	<inherits name='com.google.gwt.user.theme.clean.Clean' />
 
+	<!-- Necesario para hacer uso en la aplicación del protocolo HTTP -->
+	<inherits name="com.google.gwt.http.HTTP" />
+
 	<!-- Especifica la clase de entrada de la aplicación -->
 	<entry-point class='com.google.gwt.sample.stockwatcher.client.StockWatcher' />
 

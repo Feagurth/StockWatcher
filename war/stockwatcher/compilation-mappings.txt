@@ -1,81 +1,97 @@
-031A2DCDB783ED43BA6F8963D80DE8BF.cache.js
-locale it
-user.agent ie8
-
-0EB5CCF7F9A883A6E47ED4022A86496D.cache.js
-locale es
-user.agent gecko1_8
-
-10C659C5940DB10BBD6FA1B438FF7153.cache.js
-locale it
-user.agent ie9
-
-1FD25A5C8FACA85ABD0226DC3D4F3ED3.cache.js
-locale es
-user.agent ie8
-
-42CBBB0A80AD332898DDABCA7258E5B5.cache.js
+667D642CD4AAAE104826D78A96AD1465.cache.js
+ClientBundle.enableInlining true
+audioElementSupport maybe
+canvasElementSupport maybe
+compiler.emulatedStack false
+compiler.predeclare.cross.fragment.references false
+compiler.stackMode native
+compiler.useSourceMaps true
+compiler.useSymbolMaps false
+dragEventSupport maybe
+geolocationSupport maybe
+gwt.enableDebugId false
+gwt.forceBidi false
+gwt.logging.enabled FALSE
+gwt.suppressNonStaticFinalFieldWarnings false
+gwt.unloadEnabled false
 locale de
-user.agent gecko1_8
-
-4DC5037874BF4A023694744FD5E28DEB.cache.js
-locale es
-user.agent ie9
-
-4EEEFE40A74FABF5829FF7C1B53AFD7D.cache.js
-locale default
-user.agent gecko1_8
-
-5C44EBEF5FFCFB0C2275722E483F0925.cache.js
-locale de
+storageSupport maybe
+superdevmode off
+touchEventSupport maybe
 user.agent safari
+videoElementSupport maybe
+webApiUsage modern
 
-68B99DD42E16EA86665AAA8FA35DE5DD.cache.js
+667D642CD4AAAE104826D78A96AD1465.cache.js
+ClientBundle.enableInlining true
+audioElementSupport maybe
+canvasElementSupport maybe
+compiler.emulatedStack false
+compiler.predeclare.cross.fragment.references false
+compiler.stackMode native
+compiler.useSourceMaps true
+compiler.useSymbolMaps false
+dragEventSupport maybe
+geolocationSupport maybe
+gwt.enableDebugId false
+gwt.forceBidi false
+gwt.logging.enabled FALSE
+gwt.suppressNonStaticFinalFieldWarnings false
+gwt.unloadEnabled false
 locale default
-user.agent ie9
-
-6F0E7D056C704C0900CB21FD671C31DE.cache.js
-locale de
-user.agent ie9
-
-7DFDBCC7BE8A4E4EE32E63C066512B76.cache.js
-locale it
+storageSupport maybe
+superdevmode off
+touchEventSupport maybe
 user.agent safari
+videoElementSupport maybe
+webApiUsage modern
 
-8E1172F42EF684F7B5F90D1067F18FE0.cache.js
+667D642CD4AAAE104826D78A96AD1465.cache.js
+ClientBundle.enableInlining true
+audioElementSupport maybe
+canvasElementSupport maybe
+compiler.emulatedStack false
+compiler.predeclare.cross.fragment.references false
+compiler.stackMode native
+compiler.useSourceMaps true
+compiler.useSymbolMaps false
+dragEventSupport maybe
+geolocationSupport maybe
+gwt.enableDebugId false
+gwt.forceBidi false
+gwt.logging.enabled FALSE
+gwt.suppressNonStaticFinalFieldWarnings false
+gwt.unloadEnabled false
 locale es
-user.agent ie10
-
-A181029CB7FC02771F8D119C0E921D49.cache.js
-locale de
-user.agent ie10
-
-A519305DEF6A889D3045A5ACA647CCDA.cache.js
-locale default
+storageSupport maybe
+superdevmode off
+touchEventSupport maybe
 user.agent safari
+videoElementSupport maybe
+webApiUsage modern
 
-A7EEB5C473A9B7A746E513CC8AFDEFAB.cache.js
-locale es
+667D642CD4AAAE104826D78A96AD1465.cache.js
+ClientBundle.enableInlining true
+audioElementSupport maybe
+canvasElementSupport maybe
+compiler.emulatedStack false
+compiler.predeclare.cross.fragment.references false
+compiler.stackMode native
+compiler.useSourceMaps true
+compiler.useSymbolMaps false
+dragEventSupport maybe
+geolocationSupport maybe
+gwt.enableDebugId false
+gwt.forceBidi false
+gwt.logging.enabled FALSE
+gwt.suppressNonStaticFinalFieldWarnings false
+gwt.unloadEnabled false
+locale it
+storageSupport maybe
+superdevmode off
+touchEventSupport maybe
 user.agent safari
-
-B8052D618EAA2B60EDECBD3F8F27311C.cache.js
-locale it
-user.agent ie10
-
-BB5D408450AB544B30B2EE119DC84E53.cache.js
-locale default
-user.agent ie8
-
-ED76D1E606579EB6C2BB93EB6562F4E9.cache.js
-locale default
-user.agent ie10
-
-F0166F3C2AE892387AFEC66742583CD2.cache.js
-locale it
-user.agent gecko1_8
-
-FE8D070F983FAA8E51332DEDA9FD90B3.cache.js
-locale de
-user.agent ie8
+videoElementSupport maybe
+webApiUsage modern
 
 Devmode:devmode.js
