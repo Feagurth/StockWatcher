@@ -119,7 +119,7 @@ public class StockPrice implements Serializable {
 	 * @return El cambio de precio que ha sufrido una acción en porcentaje
 	 */
 	public double getChangePercent() {
-		return 10.0 * this.change / this.price;
+		return 100.0 * this.change / this.price;
 	}
 
 }

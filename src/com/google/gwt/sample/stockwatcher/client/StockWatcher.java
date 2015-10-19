@@ -22,6 +22,7 @@ import com.google.gwt.http.client.URL;
 import com.google.gwt.i18n.client.NumberFormat;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlexTable;
 import com.google.gwt.user.client.ui.HorizontalPanel;
@@ -31,14 +32,31 @@ import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
 
 /**
+ * Enumerador para los distintos tipos de peticiones que se pueden realizar
+ */
+enum TipoPeticion {
+	RPC, JSON, XSITE;
+}
+
+/**
  * Clase StockWatcher
  */
 public class StockWatcher implements EntryPoint {
 
 	/**
-	 * Constante para definir el tiempo de refresco de las actualizaciones
+	 * Constante para definir el tipo de petición que vamos a realizar
+	 * 
+	 * Para que la aplicación de prueba funcione debidamente hay que modificar
+	 * el archivo descriptor de despliegue (StockWatcher/war/WEB-INF/web.xml) y
+	 * modificarlo comentando y descomentando el tipo de servicio que va a
+	 * implementar el servidor web local
 	 */
-	private static final int REFRESH_INTERVAL = 5000;
+	private final TipoPeticion tipoPeticion = TipoPeticion.JSON;
+
+	/**
+	 * Constante para definir el tiempo de refresco de las actualizaciones en ms
+	 */
+	private static final int REFRESH_INTERVAL = 500;
 
 	/**
 	 * Constante para definir la url necesaria para realizar peticiones JSON
@@ -172,7 +190,7 @@ public class StockWatcher implements EntryPoint {
 			 */
 			@Override
 			public void run() {
-				refreshWatchList();
+				refreshWatchList(tipoPeticion);
 			}
 		};
 
@@ -270,158 +288,190 @@ public class StockWatcher implements EntryPoint {
 		stocksFlexTable.setWidget(row, 3, removeStockButton);
 
 		// Refrescamos la lista de acciones
-		refreshWatchList();
+		refreshWatchList(this.tipoPeticion);
 
 	}
 
 	/**
 	 * Función que calcula y refresca los preciones de las acciones
 	 */
-	private void refreshWatchList() {
+	private void refreshWatchList(TipoPeticion tipoConexion) {
 
-		// Comprobamos si tenemos algún valor en el array de acciones
-		if (stocks.size() == 0) {
-			// Si no hay ninguno, salimos de la función
-			return;
-		}
-
-		// Recuperamos la url de las peticiones JSON y la asociamos a una
-		// variable
-		String url = JSON_URL;
-
-		// Transformamos el arraylist en un iterador
-		Iterator<String> iter = stocks.iterator();
-
-		// Iteramos por todos los elementos
-		while (iter.hasNext()) {
-
-			// Añadimos a la url el código de la acción
-			url += iter.next();
-
-			// Comprobamos si hay mas registros tras el actual
-			if (iter.hasNext()) {
-				// Si es así, concatenamos a la url un signo +
-				url += "+";
+		switch (tipoConexion) {
+		case JSON: {
+			// Comprobamos si tenemos algún valor en el array de acciones
+			if (stocks.size() == 0) {
+				// Si no hay ninguno, salimos de la función
+				return;
 			}
-		}
 
-		// Transformamos la cadena de texto en una url y la almacenamos
-		url = URL.encode(url);
+			// Recuperamos la url de las peticiones JSON y la asociamos a una
+			// variable
+			String url = JSON_URL;
 
-		// Creamos un constructor de peticiones que realizará una petición tipo
-		// GET a la url especificada para realizar consultas JSON
-		RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+			// Transformamos el arraylist en un iterador
+			Iterator<String> iter = stocks.iterator();
 
-		try {
+			// Iteramos por todos los elementos
+			while (iter.hasNext()) {
 
-			// A partir del constructor creamos una petición sobre la cual
-			// asignaremos eventos para cuando se produzca un error o una
-			// respuesta exitosa
-			Request request = builder.sendRequest(null, new RequestCallback() {
-				/**
-				 * Función que se ejecutará cuando en la petición de datos se
-				 * produzca un error
-				 */
-				public void onError(Request request, Throwable exception) {
-					// Llamamos a la función diseñada para mostrar errores
-					// pasándole una cadena con el mensaje que queremos mostrar
-					// usando el sistema de internacionalización
-					displayError(messages.retrieveJSONError(""));
+				// Añadimos a la url el código de la acción
+				url += iter.next();
+
+				// Comprobamos si hay mas registros tras el actual
+				if (iter.hasNext()) {
+					// Si es así, concatenamos a la url un signo +
+					url += "+";
 				}
+			}
 
+			// Transformamos la cadena de texto en una url y la almacenamos
+			url = URL.encode(url);
+
+			// Creamos un constructor de peticiones que realizará una petición
+			// tipo
+			// GET a la url especificada para realizar consultas JSON
+			RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+
+			try {
+
+				// A partir del constructor creamos una petición sobre la cual
+				// asignaremos eventos para cuando se produzca un error o una
+				// respuesta exitosa
+				@SuppressWarnings("unused")
+				Request request = builder.sendRequest(null,
+						new RequestCallback() {
+							/**
+							 * Función que se ejecutará cuando en la petición de
+							 * datos se produzca un error
+							 */
+							public void onError(Request request,
+									Throwable exception) {
+								// Llamamos a la función diseñada para mostrar
+								// errores
+								// pasándole una cadena con el mensaje que
+								// queremos mostrar
+								// usando el sistema de internacionalización
+								displayError(messages.retrieveJSONError(""));
+							}
+
+							/**
+							 * Función que se ejecutará cuando la petición de
+							 * datos sea exitosa
+							 */
+							public void onResponseReceived(Request request,
+									Response response) {
+
+								// Comprobamos que el código de respuesta
+								// enviado por el servidor sea 200, o lo que es
+								// lo mismo que la
+								// petición ha sido completada exitosamente
+								if (200 == response.getStatusCode()) {
+
+									// Llamamos a la función updateTable pasando
+									// como parámetros un JsArray de objetos
+									// StockData que conseguiremos tras usar
+									// JsonUtils para
+									// convertir la respuesta en modo de texto
+									// de servidor en
+									// el JsArray de objetos StockData que pide
+									// la función
+									// como parámetros
+									updateTable(JsonUtils
+											.<JsArray<StockData>> safeEval(response
+													.getText()));
+								} else {
+									// Si el código de respuesta no es 200,
+									// mostramos un
+									// mensaje de error formado por una cadena
+									// que
+									// recuperamos del sistema de
+									// internacionalización
+									// concatenado con el texto de respuesta del
+									// servidor
+									displayError(messages.retrieveJSONError("("
+											+ response.getStatusText() + ")"));
+								}
+							}
+						});
+			} catch (RequestException e) {
+				// Si se produce una excepción, mostramos así mismo un mensaje
+				// de error
+				displayError(messages.retrieveJSONError(""));
+			}
+
+			break;
+		}
+		case RPC: {
+			// Inicializamos el servicio Proxy
+			if (stockPriceSvc == null) {
+				stockPriceSvc = GWT.create(StockPriceService.class);
+			}
+
+			// Configuramos el objeto de retrollamada encargado de recibir la
+			// respuesta del servidor
+			AsyncCallback<StockPrice[]> callback = new AsyncCallback<StockPrice[]>() {
 				/**
-				 * Función que se ejecutará cuando la petición de datos sea
-				 * exitosa
+				 * Función que se ejecutará cuando se produzca un error en la
+				 * petición remota
 				 */
-				public void onResponseReceived(Request request,
-						Response response) {
+				public void onFailure(Throwable caught) {
 
-					// Comprobamos que el código de respuesta enviado por el
-					// servidor sea 200, o lo que es lo mismo que la petición ha
-					// sido completada exitosamente
-					if (200 == response.getStatusCode()) {
+					// Recuperamos el mensaje de error de la excepción y lo
+					// almacenamos en una variable
+					String details = caught.getMessage();
 
-						// Llamamos a la función updateTable pasando como
-						// parámetros un JsArray de objetos StockData que
-						// conseguiremos tras usar JsonUtils para convertir la
-						// respuesta en modo de texto de servidor en el JsArray
-						// de objetos StockData que pide la función como
-						// parámetros
-						updateTable(JsonUtils
-								.<JsArray<StockData>> safeEval(response
-										.getText()));
-					} else {
-						// Si el código de respuesta no es 200, mostramos un
-						// mensaje de error formado por una cadena que
-						// recuperamos del sistema de internacionalización
-						// concatenado con el texto de respuesta del servidor
-						displayError(messages.retrieveJSONError("("
-								+ response.getStatusText() + ")"));
+					// Comprobamos si el excepción generada es una instancia de
+					// la excepción que hemos creado nosotros
+					if (caught instanceof DelistedException) {
+						// Si es así, recuperamos el símbolo de la acción que ha
+						// generado la excepción y creamos un mensaje para
+						// mostrar al usuario haciendo uso del sistema de
+						// internacionalización
+						details = messages
+								.companyError(((DelistedException) caught)
+										.getSymbol());
 					}
+
+					// Asignamos una cadena de texto con el mensaje de error a
+					// la etiqueta correspondiente haciendo uso de la
+					// internacionalización
+					errorMsgLabel.setText(constants.error() + ": " + details);
+
+					// Hacemos la etiqueta visible
+					errorMsgLabel.setVisible(true);
+				};
+
+				/**
+				 * Función que se ejecutará cuando se produzca un exito en la
+				 * petición remota
+				 * 
+				 * @param result
+				 *            StockPrice[] Array objetos StockPrice que contiene
+				 *            los valores de precios de las acciones
+				 */
+
+				public void onSuccess(StockPrice[] result) {
+					// Actualizamos la tabla con los resultados obtenidos del
+					// servidor
+					updateTable(result);
 				}
-			});
-		} catch (RequestException e) {
-			// Si se produce una excepción, mostramos así mismo un mensaje de
-			// error
-			displayError(messages.retrieveJSONError(""));
+			};
+
+			// Llamamos al servicio de precios pasándole como parámetros el
+			// array de símbolos y el objeto de retrollamada que será el
+			// encargado de
+			// tratar con los resultados obtenidos por el servidor
+			stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
+
+			break;
+
 		}
-
-		/*
-		 * 
-		 * Código para hacer peticiones de refresco de datos usando RPC
-		 * 
-		 * Comentado para poder implementar la recuperación de información en
-		 * formato JSON
-		 * 
-		 * // Inicializamos el servicio Proxy if (stockPriceSvc == null) {
-		 * stockPriceSvc = GWT.create(StockPriceService.class); }
-		 * 
-		 * // Configuramos el objeto de retrollamada encargado de recibir la //
-		 * respuesta del servidor AsyncCallback<StockPrice[]> callback = new
-		 * AsyncCallback<StockPrice[]>() {
-		 *//**
-		 * Función que se ejecutará cuando se produzca un error en la
-		 * petición remota
-		 */
-		/*
-		 * public void onFailure(Throwable caught) {
-		 * 
-		 * // Recuperamos el mensaje de error de la excepción y lo //
-		 * almacenamos en una variable String details = caught.getMessage();
-		 * 
-		 * // Comprobamos si el excepción generada es una instancia de la //
-		 * excepción que hemos creado nosotros if (caught instanceof
-		 * DelistedException) {
-		 * 
-		 * // Si es así, recuperamos el símbolo de la acción que ha // generado
-		 * la excepción y creamos un mensaje para mostrar // al usuario haciendo
-		 * uso del sistema de // internacionalización details = messages
-		 * .companyError(((DelistedException) caught) .getSymbol()); }
-		 * 
-		 * // Asignamos una cadena de texto con el mensaje de error a la //
-		 * etiqueta correspondiente haciendo uso de la // internacionalización
-		 * errorMsgLabel.setText(constants.error() + ": " + details);
-		 * 
-		 * // Hacemos la etiqueta visible errorMsgLabel.setVisible(true); }
-		 *//**
-		 * Función que se ejecutará cuando se produzca un exito en la
-		 * petición remota
-		 * 
-		 * @param result
-		 *            StockPrice[] Array objetos StockPrice que contiene los
-		 *            valores de precios de las acciones
-		 */
-		/*
-		 * public void onSuccess(StockPrice[] result) { // Actualizamos la tabla
-		 * con los resultados obtenidos del // servidor updateTable(result); }
-		 * };
-		 * 
-		 * // Llamamos al servicio de precios pasándole como parámetros el array
-		 * de // símbolos y el objeto de retrollamada que será el encargado de
-		 * tratar // con los resultados obtenidos por el servidor
-		 * stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
-		 */
-
+		case XSITE:
+			break;
+		default:
+			break;
+		}
 	}
 
 	/**
