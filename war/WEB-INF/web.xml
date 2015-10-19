@@ -12,30 +12,20 @@
 
 	<!-- Servlets -->
 
+	<!-- Configuración para el uso de peticiones RPC <servlet> <servlet-name>stockPriceServiceImpl</servlet-name> 
+		<servlet-class>com.google.gwt.sample.stockwatcher.server.StockPriceServiceImpl</servlet-class> 
+		</servlet> <servlet-mapping> <servlet-name>stockPriceServiceImpl</servlet-name> 
+		<url-pattern>/stockwatcher/stockPrices</url-pattern> </servlet-mapping> -->
 
-	<!-- Configuración para el uso de peticiones RPC 
-	<servlet>
-		<servlet-name>stockPriceServiceImpl</servlet-name>
-		<servlet-class>com.google.gwt.sample.stockwatcher.server.StockPriceServiceImpl</servlet-class>
-	</servlet>
+	<!-- Configuración para el uso de peticiones JSON <servlet> <servlet-name>jsonStockData</servlet-name> 
+		<servlet-class>com.google.gwt.sample.stockwatcher.server.JsonStockData</servlet-class> 
+		</servlet> <servlet-mapping> <servlet-name>jsonStockData</servlet-name> <url-pattern>/stockwatcher/stockPrices</url-pattern> 
+		</servlet-mapping> -->
 
-	<servlet-mapping>
-		<servlet-name>stockPriceServiceImpl</servlet-name>
-		<url-pattern>/stockwatcher/stockPrices</url-pattern>
-	</servlet-mapping>
--->
-
-
-	<!-- Configuración para el uso de peticiones JSON -->
-	<servlet>
-		<servlet-name>jsonStockData</servlet-name>
-		<servlet-class>com.google.gwt.sample.stockwatcher.server.JsonStockData</servlet-class>
-	</servlet>
-
-	<servlet-mapping>
-		<servlet-name>jsonStockData</servlet-name>
-		<url-pattern>/stockwatcher/stockPrices</url-pattern>
-	</servlet-mapping>
-	
+	<!-- Para el uso de peticiones Cross-Site no es necesario definir ningún 
+		servlet, puesto que las peticiones se realizan a servidores remotos y no 
+		es necesario crear un servlet en el servidor para que sea en encargado de 
+		sumunistrar los valores de las acciones, puesto que lo hace el servidor remoto 
+		de forma automática -->
 
 </web-app>

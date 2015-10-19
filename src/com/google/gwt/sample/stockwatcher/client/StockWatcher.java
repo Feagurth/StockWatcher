@@ -20,6 +20,7 @@ import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.http.client.URL;
 import com.google.gwt.i18n.client.NumberFormat;
+import com.google.gwt.jsonp.client.JsonpRequestBuilder;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.rpc.AsyncCallback;
@@ -51,18 +52,18 @@ public class StockWatcher implements EntryPoint {
 	 * modificarlo comentando y descomentando el tipo de servicio que va a
 	 * implementar el servidor web local
 	 */
-	private final TipoPeticion tipoPeticion = TipoPeticion.JSON;
+	private final TipoPeticion tipoPeticion = TipoPeticion.XSITE;
+
+	/**
+	 * Variable para definir la url necesaria para realizar peticiones JSON o
+	 * CrossSite
+	 */
+	private String Json_URL = "";
 
 	/**
 	 * Constante para definir el tiempo de refresco de las actualizaciones en ms
 	 */
 	private static final int REFRESH_INTERVAL = 500;
-
-	/**
-	 * Constante para definir la url necesaria para realizar peticiones JSON
-	 */
-	private static final String JSON_URL = GWT.getModuleBaseURL()
-			+ "stockPrices?q=";
 
 	// Objetos usados para la interfaz gráfica
 	private VerticalPanel mainPanel = new VerticalPanel();
@@ -298,6 +299,7 @@ public class StockWatcher implements EntryPoint {
 	private void refreshWatchList(TipoPeticion tipoConexion) {
 
 		switch (tipoConexion) {
+		case XSITE:
 		case JSON: {
 			// Comprobamos si tenemos algún valor en el array de acciones
 			if (stocks.size() == 0) {
@@ -305,9 +307,21 @@ public class StockWatcher implements EntryPoint {
 				return;
 			}
 
+			// Comprobamos el tipo de petición que vamos a llevar a cabo para
+			// asignar una url u otra para realizar la petición
+			if (this.tipoPeticion == TipoPeticion.JSON) {
+				// Realizamos una petición local
+				this.Json_URL = GWT.getModuleBaseURL() + "stockPrices?q=";
+				// final String JSON_URL = "http://localhost:8000/?q=";
+			} else {
+				// Realizamos una petición remota o local si así lo quermeos
+				// this.Json_URL = "http://192.168.1.229/stockPrices.php?q=";
+				this.Json_URL = "http://127.0.0.1/StockWatcher/stockPrices.php?q=";
+			}
+
 			// Recuperamos la url de las peticiones JSON y la asociamos a una
 			// variable
-			String url = JSON_URL;
+			String url = this.Json_URL;
 
 			// Transformamos el arraylist en un iterador
 			Iterator<String> iter = stocks.iterator();
@@ -328,76 +342,125 @@ public class StockWatcher implements EntryPoint {
 			// Transformamos la cadena de texto en una url y la almacenamos
 			url = URL.encode(url);
 
-			// Creamos un constructor de peticiones que realizará una petición
-			// tipo
-			// GET a la url especificada para realizar consultas JSON
-			RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, url);
+			if (this.tipoPeticion == TipoPeticion.JSON) {
 
-			try {
+				// Creamos un constructor de peticiones que realizará una
+				// petición tipo GET a la url especificada para realizar
+				// consultas JSON
+				RequestBuilder builder = new RequestBuilder(RequestBuilder.GET,
+						url);
 
-				// A partir del constructor creamos una petición sobre la cual
-				// asignaremos eventos para cuando se produzca un error o una
-				// respuesta exitosa
-				@SuppressWarnings("unused")
-				Request request = builder.sendRequest(null,
-						new RequestCallback() {
+				try {
+
+					// A partir del constructor creamos una petición sobre la
+					// cual asignaremos eventos para cuando se produzca un error
+					// o una respuesta exitosa
+					@SuppressWarnings("unused")
+					Request request = builder.sendRequest(null,
+							new RequestCallback() {
+								/**
+								 * Función que se ejecutará cuando en la
+								 * petición de datos se produzca un error
+								 */
+								public void onError(Request request,
+										Throwable exception) {
+									// Llamamos a la función diseñada para
+									// mostrar errores pasándole una cadena con
+									// el mensaje que queremos mostrar usando el
+									// sistema de internacionalización
+									displayError(messages.retrieveJSONError(""));
+								}
+
+								/**
+								 * Función que se ejecutará cuando la petición
+								 * de datos sea exitosa
+								 */
+								public void onResponseReceived(Request request,
+										Response response) {
+
+									// Comprobamos que el código de respuesta
+									// enviado por el servidor sea 200, o lo que
+									// es lo mismo que la petición ha sido
+									// completada exitosamente
+									if (200 == response.getStatusCode()) {
+
+										// Llamamos a la función updateTable
+										// pasando como parámetros un JsArray de
+										// objetos StockData que conseguiremos
+										// tras usar JsonUtils para convertir la
+										// respuesta en modo de texto de
+										// servidor en el JsArray de objetos
+										// StockData que pide la función como
+										// parámetros
+										updateTable(JsonUtils
+												.<JsArray<StockData>> safeEval(response
+														.getText()));
+									} else {
+										// Si el código de respuesta no es 200,
+										// mostramos un mensaje de error formado
+										// por una cadena que recuperamos del
+										// sistema de internacionalización
+										// concatenado con el texto de respuesta
+										// del servidor
+										displayError(messages.retrieveJSONError("("
+												+ response.getStatusText()
+												+ ")"));
+									}
+								}
+							});
+				} catch (RequestException e) {
+					// Si se produce una excepción, mostramos así mismo un
+					// mensaje de error
+					displayError(messages.retrieveJSONError(""));
+				}
+			} else {
+
+				// Creamos un objeto para realizar pediciones Jsonp
+				JsonpRequestBuilder builder = new JsonpRequestBuilder();
+
+				// Hacemos una petición a la url donde tenemos el servicio que
+				// genera la información y asignamos un nuevo objeto de
+				// retrollamada para que se encargue de recoger los eventos
+				// onFailure y onSuccess de la petición
+				builder.requestObject(url,
+						new AsyncCallback<JsArray<StockData>>() {
+
 							/**
-							 * Función que se ejecutará cuando en la petición de
-							 * datos se produzca un error
+							 * Función que se va a ejecutar cuando se produzca
+							 * un error en la petición
 							 */
-							public void onError(Request request,
-									Throwable exception) {
-								// Llamamos a la función diseñada para mostrar
-								// errores
-								// pasándole una cadena con el mensaje que
-								// queremos mostrar
-								// usando el sistema de internacionalización
+							public void onFailure(Throwable caught) {
+								// Si se produce una excepción, mostramos así
+								// mismo un mensaje de error
 								displayError(messages.retrieveJSONError(""));
+
 							}
 
 							/**
-							 * Función que se ejecutará cuando la petición de
-							 * datos sea exitosa
+							 * Función que se va a ejecutar cuando la petición
+							 * se haya realizado exitosamente
+							 * 
+							 * @param data
+							 *            JsArray Array de información de
+							 *            acciones en forma de objetos StockData
 							 */
-							public void onResponseReceived(Request request,
-									Response response) {
-
-								// Comprobamos que el código de respuesta
-								// enviado por el servidor sea 200, o lo que es
-								// lo mismo que la
-								// petición ha sido completada exitosamente
-								if (200 == response.getStatusCode()) {
-
-									// Llamamos a la función updateTable pasando
-									// como parámetros un JsArray de objetos
-									// StockData que conseguiremos tras usar
-									// JsonUtils para
-									// convertir la respuesta en modo de texto
-									// de servidor en
-									// el JsArray de objetos StockData que pide
-									// la función
-									// como parámetros
-									updateTable(JsonUtils
-											.<JsArray<StockData>> safeEval(response
-													.getText()));
-								} else {
-									// Si el código de respuesta no es 200,
-									// mostramos un
-									// mensaje de error formado por una cadena
-									// que
-									// recuperamos del sistema de
-									// internacionalización
-									// concatenado con el texto de respuesta del
-									// servidor
-									displayError(messages.retrieveJSONError("("
-											+ response.getStatusText() + ")"));
+							public void onSuccess(JsArray<StockData> data) {
+								// Comprobamos si la información que trae el
+								// evento es nula
+								if (data == null) {
+									// De ser así, mostramos un mensaje de error
+									// y salimos de la función
+									displayError(messages.retrieveJSONError(""));
+									return;
 								}
+
+								// Si todo ha salido correcto, actualizamos la
+								// información de la tabla con la nueva
+								// información
+								updateTable(data);
+
 							}
 						});
-			} catch (RequestException e) {
-				// Si se produce una excepción, mostramos así mismo un mensaje
-				// de error
-				displayError(messages.retrieveJSONError(""));
 			}
 
 			break;
@@ -467,8 +530,6 @@ public class StockWatcher implements EntryPoint {
 			break;
 
 		}
-		case XSITE:
-			break;
 		default:
 			break;
 		}
